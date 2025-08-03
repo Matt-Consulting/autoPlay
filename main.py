@@ -1,7 +1,7 @@
 #!/venv/bin/python3
 """
 Dragon Warrior Automation Controller
-Uses Mesen emulator with default keybindings
+Simplified version for RGB grid analysis
 """
 
 import cv2
@@ -13,47 +13,33 @@ from sense import DragonWarriorSensor
 
 class Config:
     """Centralized configuration manager"""
-    
     def __init__(self):
         # Emulator settings
-        self.emulator_paths = [
-            "Mesen.AppImage",
-            "Mesen (Linux x64 - AppImage).AppImage",
-            "Mesen2.AppImage"
-        ]
+        self.emulator_path = Path("Mesen.AppImage")
         self.rom_path = Path("./DragonWarrior.zip")
-        self.emulator_start_delay = 5  # seconds
+        self.emulator_start_delay = 2
         
-        # Sensor settings
-        self.sensor_refresh_rate = 0.1  # seconds
-        self.grid_visible = True
-        self.rgb_display = False
-        self.type_display = False
-        
+        self.main_loop_rate = 0.1  # seconds
+
         # Keybindings (using ASCII codes)
         self.keybindings = {
             'quit': ord('q'),
             'toggle_grid': ord('g'),
-            'toggle_rgb': ord('r'),
-            'toggle_types': ord('t')
+            'toggle_rgb': ord('r')  # Removed 'toggle_types' binding
         }
         
-        self.validate_paths()
-
-    def validate_paths(self):
         """Ensure required files exist"""
-        if not any(Path(p).exists() for p in self.emulator_paths):
-            raise FileNotFoundError("Mesen emulator not found")
+        if not self.emulator_path.exists():
+            raise FileNotFoundError(f"Mesen emulator not found at {self.emulator_path}")
         if not self.rom_path.exists():
             raise FileNotFoundError(f"ROM not found at {self.rom_path}")
 
 def start_emulator(config):
     """Launch Mesen with default configuration"""
-    mesen_path = next(Path(p) for p in config.emulator_paths if Path(p).exists())
-    mesen_path.chmod(0o755)  # Ensure executable
+    config.emulator_path.chmod(0o755)  # Ensure executable
     
     process = subprocess.Popen(
-        [str(mesen_path.absolute()), str(config.rom_path.absolute())],
+        [str(config.emulator_path.absolute()), str(config.rom_path.absolute())],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         cwd=os.getcwd()
@@ -70,25 +56,20 @@ def main():
         print(f"Emulator started (PID: {emulator.pid})")
         
         sensor = DragonWarriorSensor()
-        sensor.grid_visible = config.grid_visible
-        sensor.rgb_display = config.rgb_display
-        sensor.type_display = config.type_display
         
         while True:
-            frame, _, _ = sensor.capture_frame()
+            frame, rgb_grid, _ = sensor.capture_frame()  # Ignore third return value
             cv2.imshow("Dragon Warrior Sensor", frame)
             
             key = cv2.waitKey(1) & 0xFF
             if key == config.keybindings['quit']:
                 break
             elif key == config.keybindings['toggle_grid']:
-                sensor.grid_visible = not sensor.grid_visible
+                sensor.toggle_grid()
             elif key == config.keybindings['toggle_rgb']:
-                sensor.rgb_display = not sensor.rgb_display
-            elif key == config.keybindings['toggle_types']:
-                sensor.type_display = not sensor.type_display
+                sensor.toggle_rgb()
             
-            time.sleep(config.sensor_refresh_rate)
+            time.sleep(config.main_loop_rate)
             
     except Exception as e:
         print(f"Error: {e}")
