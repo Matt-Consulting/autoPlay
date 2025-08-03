@@ -1,0 +1,12 @@
+{
+  "color_to_type": {
+    "132,132,132": 0,
+    "40,47,96": 1
+
+  },
+  "type_aliases": {
+    "0": "block",
+    "1": "brick"
+  },
+  "next_type_id": 2
+}
