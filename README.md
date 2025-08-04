@@ -105,17 +105,15 @@ python main.py
 | `r`         | Toggle RGB value display      |
 | `t`         | Toggle type annotations       |
 
-### Manual Calibration
-If automatic window detection fails:
-```python
-# In main.py after sensor initialization
-sensor.manual_calibrate(
-    top=36, 
-    left=40, 
-    width=256, 
-    height=256
-)
-```
+### Sensing
+Determing the state of the screen is done through sense.py.  This includes operations related to capturing the screen, dividing it into a grid, and then determing what types of tiles are displayed.
+
+<img width="256" height="272" alt="StartScreen" src="https://github.com/user-attachments/assets/5ee4ef41-ad26-4bd3-bb42-b7bfe50062b1" />
+
+<img width="370" height="331" alt="StartGrid" src="https://github.com/user-attachments/assets/775629f2-c4f2-489b-8736-f514e1bc2e24" />
+
+<img width="645" height="700" alt="StartRGB" src="https://github.com/user-attachments/assets/e44c7918-7b17-4f35-a66c-5b947bb1c5e7" />
+
 
 ## Configuration
 
