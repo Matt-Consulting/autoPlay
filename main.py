@@ -1,7 +1,7 @@
 #!/venv/bin/python3
 """
 Dragon Warrior Automation Controller
-Simplified version for RGB grid analysis
+Main application loop
 """
 
 import cv2
@@ -10,6 +10,7 @@ import subprocess
 import os
 from pathlib import Path
 from sense import DragonWarriorSensor
+from think import Think  # Changed import
 
 class Config:
     """Centralized configuration manager"""
@@ -20,13 +21,6 @@ class Config:
         self.emulator_start_delay = 2
         
         self.main_loop_rate = 0.1  # seconds
-
-        # Keybindings (using ASCII codes)
-        self.keybindings = {
-            'quit': ord('q'),
-            'toggle_grid': ord('g'),
-            'toggle_rgb': ord('r')  # Removed 'toggle_types' binding
-        }
         
         """Ensure required files exist"""
         if not self.emulator_path.exists():
@@ -56,18 +50,33 @@ def main():
         print(f"Emulator started (PID: {emulator.pid})")
         
         sensor = DragonWarriorSensor()
+        thinker = Think()  # Create Think controller
+        
+        print("\nControls:")
+        print("  q - Quit")
+        print("  g - Toggle grid overlay")
+        print("  r - Toggle RGB values window")
+        print("  d - Toggle diagnostics window")
+        print("  s - Save discovered tiles")
         
         while True:
-            frame, rgb_grid, _ = sensor.capture_frame()  # Ignore third return value
+            frame, rgb_grid, _ = sensor.capture_frame()
             cv2.imshow("Dragon Warrior Sensor", frame)
             
+            # Process frame through thinker
+            thinker.process_frame(rgb_grid)
+            
             key = cv2.waitKey(1) & 0xFF
-            if key == config.keybindings['quit']:
+            if key == ord('q'):
                 break
-            elif key == config.keybindings['toggle_grid']:
+            elif key == ord('g'):
                 sensor.toggle_grid()
-            elif key == config.keybindings['toggle_rgb']:
+            elif key == ord('r'):
                 sensor.toggle_rgb()
+            elif key == ord('d'):
+                thinker.toggle_diagnostics()
+            elif key == ord('s'):
+                thinker.save_discovered_tiles()
             
             time.sleep(config.main_loop_rate)
             
@@ -75,6 +84,7 @@ def main():
         print(f"Error: {e}")
     finally:
         cv2.destroyAllWindows()
+        thinker.toggle_diagnostics()  # Ensure diagnostics window closes
         if 'emulator' in locals():
             emulator.terminate()
         print("Application terminated")
