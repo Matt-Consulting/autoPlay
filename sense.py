@@ -4,7 +4,7 @@ import numpy as np
 import subprocess
 import time
 from pathlib import Path
-from mss import mss
+import pyautogui
 import json
 
 class DragonWarriorSensor:
@@ -12,8 +12,7 @@ class DragonWarriorSensor:
         self.rgb_window = None  # Renamed from diagnostic_window
         self.grid_visible = grid_visible
         self.rgb_display = rgb_display
-        self.sct = mss()
-        self.monitor = self._get_window_geometry()
+        self.window_geometry = self._get_window_geometry()
         
         # Grid configuration
         self.GRID_SIZE = 15
@@ -55,8 +54,8 @@ class DragonWarriorSensor:
                 
                 print(f"Window geometry: x={x}, y={y}, width={width}, height={height}")
                 return {
-                    "top": y - 40,
                     "left": x + 6,
+                    "top": y - 40,
                     "width": 240,
                     "height": 240
                 }
@@ -96,11 +95,20 @@ class DragonWarriorSensor:
         return rgb_img
     
     def capture_frame(self, debug=False):
-        """Capture and process game frame"""
+        """Capture and process game frame using PyAutoGUI"""
         try:
-            # Capture and convert frame
-            frame = np.array(self.sct.grab(self.monitor))
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGRA2RGB)
+            # Capture screen region with PyAutoGUI
+            screenshot = pyautogui.screenshot(
+                region=(
+                    self.window_geometry["left"],
+                    self.window_geometry["top"],
+                    self.window_geometry["width"],
+                    self.window_geometry["height"]
+                )
+            )
+            
+            # Convert to numpy array and then to RGB format
+            frame_rgb = np.array(screenshot)
 
             if debug:
                 debug_file = Path("debug_capture.png")
