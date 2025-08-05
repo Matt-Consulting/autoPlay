@@ -1,10 +1,11 @@
 #!/venv/bin/python3
 """
-Tile Learner Class with POMDP-style belief state
-Handles probabilistic discovery and learning of new tiles
+Tile Learner Class
+Handles discovery and learning of new tile RGB values with probability tracking
 """
 
-import numpy as np
+import time
+from collections import defaultdict
 
 class TileLearner:
     def __init__(self, analyzer):
@@ -12,19 +13,18 @@ class TileLearner:
         self.player_pos = (7, 7)  # Fixed player position (0-indexed)
         self.adjacent_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         
-        # Belief state tracking
-        self.tile_beliefs = {}  # {color_key: {'walkable': belief, 'interactable': belief}}
-        self.observation_counts = {}  # {color_key: count}
-        self.candidate_tiles = {}  # Tiles ready for suggestion
+        # RGB value tracking
+        self.rgb_beliefs = defaultdict(dict)  # {position: {rgb_value: count}}
+        self.observation_counts = defaultdict(int)  # {position: total_count}
+        self.candidate_positions = set()  # Positions ready for suggestion
+        self.most_recent_candidate = None  # Track the most recent candidate
         
         # Learning parameters
-        self.walkable_prior = 0.7  # Initial belief that new tiles are walkable
-        self.interactable_prior = 0.3
-        self.confidence_threshold = 0.85  # Required confidence to suggest
-        self.min_observations = 5  # Minimum observations before suggesting
+        self.min_observations = 60  # Minimum observations before suggesting
+        self.max_rgb_options = 3  # Max RGB values to track per position
 
     def process_grid(self, rgb_grid, alias_grid):
-        """Process grid to discover and learn about unknown tiles"""
+        """Process grid to discover unknown tiles"""
         if rgb_grid is None or alias_grid is None:
             return
 
@@ -39,115 +39,121 @@ class TileLearner:
             x, y = px + dx, py + dy
             if 0 <= x < len(alias_grid[0]) and 0 <= y < len(alias_grid):
                 if alias_grid[y][x] == "unknown":
-                    self._update_belief_state(rgb_grid[y][x])
+                    self._update_rgb_beliefs((x, y), tuple(rgb_grid[y][x]))
 
-    def _update_belief_state(self, rgb_value):
-        """Update belief state for observed unknown tile"""
-        color_key = f"{rgb_value[2]},{rgb_value[1]},{rgb_value[0]}"
+    def _update_rgb_beliefs(self, position, rgb_value):
+        """Update RGB belief counts for a position"""
+        # Increment count for this RGB value at this position
+        if rgb_value not in self.rgb_beliefs[position]:
+            self.rgb_beliefs[position][rgb_value] = 0
+        self.rgb_beliefs[position][rgb_value] += 1
+        self.observation_counts[position] += 1
         
-        # Initialize beliefs if new tile
-        if color_key not in self.tile_beliefs:
-            self.tile_beliefs[color_key] = {
-                'walkable': self.walkable_prior,
-                'interactable': self.interactable_prior
-            }
-            self.observation_counts[color_key] = 0
-        
-        # Increment observation count
-        self.observation_counts[color_key] += 1
-        
-        # Get current interaction observations (simplified - needs real game feedback)
-        # In a full implementation, these would come from actual player interactions
-        walk_observed = True  # Default assumption
-        interact_observed = False  # Default assumption
-        
-        # Update beliefs using Bayesian learning
-        walk_prior = self.tile_beliefs[color_key]['walkable']
-        interact_prior = self.tile_beliefs[color_key]['interactable']
-        
-        # Simplified belief update (would be more sophisticated in full POMDP)
-        self.tile_beliefs[color_key]['walkable'] = self._update_belief(
-            walk_prior, walk_observed, learning_rate=0.1)
-        self.tile_beliefs[color_key]['interactable'] = self._update_belief(
-            interact_prior, interact_observed, learning_rate=0.05)
+        # Prune to only keep top N RGB values
+        if len(self.rgb_beliefs[position]) > self.max_rgb_options:
+            # Remove least observed RGB value
+            min_rgb = min(self.rgb_beliefs[position].items(), key=lambda x: x[1])[0]
+            del self.rgb_beliefs[position][min_rgb]
         
         # Check if ready to suggest
-        self._check_suggestion_threshold(color_key)
+        if self.observation_counts[position] >= self.min_observations:
+            self.candidate_positions.add(position)
+            self.most_recent_candidate = position
+            self._suggest_new_tile(position)
 
-    def _update_belief(self, prior, observed, learning_rate=0.1):
-        """Update a single belief value"""
-        if observed:
-            return min(1.0, prior + learning_rate * (1 - prior))
-        else:
-            return max(0.0, prior - learning_rate * prior)
-
-    def _check_suggestion_threshold(self, color_key):
-        """Check if beliefs meet confidence threshold"""
-        if self.observation_counts[color_key] < self.min_observations:
-            return
-            
-        beliefs = self.tile_beliefs[color_key]
-        walk_conf = max(beliefs['walkable'], 1 - beliefs['walkable'])
-        interact_conf = max(beliefs['interactable'], 1 - beliefs['interactable'])
+    def _get_top_rgb_values(self, position):
+        """Return top RGB values by observation count"""
+        rgb_counts = self.rgb_beliefs[position]
+        total = self.observation_counts[position]
+        sorted_rgbs = sorted(rgb_counts.items(), key=lambda x: x[1], reverse=True)
         
-        if walk_conf >= self.confidence_threshold and interact_conf >= self.confidence_threshold/2:
-            self.candidate_tiles[color_key] = {
-                'walkable': beliefs['walkable'] > 0.5,
-                'interactable': beliefs['interactable'] > 0.5,
-                'observations': self.observation_counts[color_key]
-            }
-            self._suggest_new_tile(color_key)
+        return [
+            (rgb, count, count/total) 
+            for rgb, count in sorted_rgbs[:self.max_rgb_options]
+        ]
 
-    def _suggest_new_tile(self, color_key):
+    def _suggest_new_tile(self, position):
         """Suggest a new tile to be saved"""
-        candidate = self.candidate_tiles[color_key]
-        print(f"\nTile Suggestion Ready:")
-        print(f"RGB: {color_key}")
-        print(f"Observations: {candidate['observations']}")
-        print(f"Properties:")
-        print(f"- Walkable: {candidate['walkable']} (confidence: {self.tile_beliefs[color_key]['walkable']:.2f})")
-        print(f"- Interactable: {candidate['interactable']} (confidence: {self.tile_beliefs[color_key]['interactable']:.2f})")
-        print("Press 's' to save or keep observing")
+        top_rgbs = self._get_top_rgb_values(position)
+        total_obs = self.observation_counts[position]
+        
+        print(f"\nTile Suggestion Ready at position {position}:")
+        print(f"Total observations: {total_obs}")
+        print("Top RGB values:")
+        
+        for i, (rgb, count, confidence) in enumerate(top_rgbs, 1):
+            print(f"{i}. RGB({rgb[0]}, {rgb[1]}, {rgb[2]}) - "
+                  f"{count} obs ({confidence:.1%})")
+        
+        print("Press 's' to save the most likely RGB value(s)")
 
     def save_new_tiles(self):
-        """Save candidate tiles to mappings"""
-        if not self.candidate_tiles:
+        """Save the most recent candidate tile to mappings"""
+        if not self.most_recent_candidate:
             print("No candidate tiles ready for saving")
             return False
         
-        new_tiles = []
-        for color_key, props in self.candidate_tiles.items():
-            new_alias = self._generate_alias()
-            type_id = self.analyzer.next_type_id
+        position = self.most_recent_candidate
+        top_rgbs = self._get_top_rgb_values(position)
+        
+        if not top_rgbs:
+            print("No RGB values found for this position")
+            return False
             
-            self.analyzer.color_to_type[color_key] = type_id
+        new_alias = self._generate_alias()
+        type_id = self.analyzer.next_type_id
+        
+        # Determine if this is a single RGB or multiple (for animation)
+        if len(top_rgbs) == 1:
+            # Single RGB value
+            rgb, count, confidence = top_rgbs[0]
+            rgb_key = f"{rgb[0]},{rgb[1]},{rgb[2]}"
+            
+            self.analyzer.color_to_type[rgb_key] = type_id
             self.analyzer.type_aliases[str(type_id)] = new_alias
             self.analyzer.tile_properties[new_alias] = {
-                'walkable': props['walkable'],
-                'interactable': props['interactable'],
+                'walkable': True,  # Default assumption
+                'interactable': False,  # Default assumption
                 'learned': True,
-                'rgb': color_key,
-                'confidence': {
-                    'walkable': float(self.tile_beliefs[color_key]['walkable']),
-                    'interactable': float(self.tile_beliefs[color_key]['interactable'])
+                'rgb': rgb_key
+            }
+        else:
+            # Multiple RGB values (animation frames)
+            rgb_values = [rgb for rgb, count, confidence in top_rgbs]
+            
+            self.analyzer.type_aliases[str(type_id)] = new_alias
+            self.analyzer.tile_properties[new_alias] = {
+                'walkable': True,  # Default for NPCs
+                'interactable': True,  # Default for NPCs
+                'learned': True,
+                'animation_frames': {
+                    'default': [f"{rgb[0]},{rgb[1]},{rgb[2]}" for rgb in rgb_values]
                 }
             }
-            self.analyzer.next_type_id += 1
-            new_tiles.append((new_alias, color_key, props['observations']))
+            # Map all RGB values to same type
+            for rgb in rgb_values:
+                rgb_key = f"{rgb[0]},{rgb[1]},{rgb[2]}"
+                self.analyzer.color_to_type[rgb_key] = type_id
         
-        if new_tiles:
-            self.analyzer._save_mappings()
-            # Clear saved candidates from tracking
-            for color_key in self.candidate_tiles.keys():
-                del self.tile_beliefs[color_key]
-                del self.observation_counts[color_key]
-            self.candidate_tiles = {}
-            
-            print("\nSaved new tiles:")
-            for alias, color, count in new_tiles:
-                print(f"- {alias}: {color} (from {count} observations)")
-            return True
-        return False
+        self.analyzer.next_type_id += 1
+        self.analyzer._save_mappings()
+        
+        # Clean up
+        del self.rgb_beliefs[position]
+        del self.observation_counts[position]
+        self.candidate_positions.discard(position)
+        self.most_recent_candidate = None
+        
+        print(f"\nSaved new tile: {new_alias}")
+        if len(top_rgbs) > 1:
+            print("As animated tile with RGB values:")
+            for rgb, count, confidence in top_rgbs:
+                print(f"- RGB({rgb[0]}, {rgb[1]}, {rgb[2]})")
+        else:
+            rgb = top_rgbs[0][0]
+            print(f"RGB: ({rgb[0]}, {rgb[1]}, {rgb[2]})")
+        print(f"From {self.observation_counts[position]} observations")
+        return True
 
     def _generate_alias(self):
         """Generate next available alphabetical alias"""
@@ -158,7 +164,7 @@ class TileLearner:
     def get_observation_stats(self):
         """Return observation statistics"""
         return {
-            'total_observed': len(self.observation_counts),
-            'candidates_ready': len(self.candidate_tiles),
+            'positions_observed': len(self.observation_counts),
+            'candidates_ready': len(self.candidate_positions),
             'total_observations': sum(self.observation_counts.values())
         }

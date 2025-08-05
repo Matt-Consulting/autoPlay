@@ -1,13 +1,14 @@
 #!/venv/bin/python3
 """
 Base Tile Analyzer Class
-Handles fundamental tile classification and diagnostics
+Handles fundamental tile classification and diagnostics with optimized window positioning
 """
 
 import json
 from pathlib import Path
 import cv2
 import numpy as np
+from mss import mss
 
 class TileAnalyzer:
     def __init__(self, mappings_file="type_mappings.json"):
@@ -17,6 +18,7 @@ class TileAnalyzer:
         self.tile_properties = {}
         self.next_type_id = 0
         self.diag_window = None
+        self.sct = mss()  # For screen information
         self._load_mappings()
 
     def _load_mappings(self):
@@ -82,7 +84,7 @@ class TileAnalyzer:
         for row in rgb_grid:
             alias_row = []
             for pixel in row:
-                color_key = f"{pixel[2]},{pixel[1]},{pixel[0]}"
+                color_key = f"{pixel[0]},{pixel[1]},{pixel[2]}"
                 type_id = self.color_to_type.get(color_key, -1)
                 alias = self.type_aliases.get(str(type_id), "unknown")
                 alias_row.append(alias)
@@ -90,11 +92,12 @@ class TileAnalyzer:
         return alias_grid
 
     def show_diagnostics(self, alias_grid):
-        """Create diagnostics window with tile information"""
+        """Create diagnostics window positioned in empty screen space"""
         if alias_grid is None:
             return
 
-        scale_factor = 4
+        # Create diagnostics image
+        scale_factor = 6
         h, w = len(alias_grid), len(alias_grid[0])
         diag_img = np.zeros((h*scale_factor*10, w*scale_factor*10, 3), dtype=np.uint8)
         
@@ -106,30 +109,39 @@ class TileAnalyzer:
                 py = y * scale_factor * 10 + 5
                 
                 # Determine tile color
+                # Note that these color values are based on the default CV2 BGR color space.
                 if alias == "player":
                     bg_color = (255, 0, 0)  # Blue
                 elif alias == "unknown":
                     bg_color = (100, 100, 100)  # Grey
                 elif properties.get("walkable"):
-                    bg_color = (0, 255, 0)  # Green
+                    bg_color = (0, 100, 0)  # Green
                 else:
-                    bg_color = (0, 0, 255)  # Red
+                    bg_color = (0, 0, 100)  # Red
                 
                 # Draw tile and text
-                cv2.rectangle(diag_img, (px, py), (px + scale_factor*8, py + scale_factor*8), bg_color, -1)
+                cv2.rectangle(diag_img, (px, py), (px + scale_factor*9, py + scale_factor*9), bg_color, -1)
                 text_color = (0, 0, 0) if alias == "player" else (255, 255, 255)
                 cv2.putText(diag_img, alias, (px, py + scale_factor*3), cv2.FONT_HERSHEY_SIMPLEX, 0.3, text_color, 1)
                 
                 if alias != "player":
                     cv2.putText(diag_img, f"Walk: {'Y' if properties.get('walkable') else 'N'}", 
                               (px, py + scale_factor*5), cv2.FONT_HERSHEY_SIMPLEX, 0.3, text_color, 1)
-                    cv2.putText(diag_img, f"Intr: {'Y' if properties.get('interactable') else 'N'}", 
-                              (px, py + scale_factor*7), cv2.FONT_HERSHEY_SIMPLEX, 0.3, text_color, 1)
-        
+
+        # Window management
         if self.diag_window is None:
             self.diag_window = "Tile Diagnostics"
             cv2.namedWindow(self.diag_window, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(self.diag_window, 800, 800)
+            
+            # Position window in top-right corner
+            monitor = self.sct.monitors[0]
+            window_width = 800
+            window_height = 800
+            pos_x = 675
+            pos_y = 0  # 20px padding from top
+            
+            cv2.resizeWindow(self.diag_window, window_width, window_height)
+            cv2.moveWindow(self.diag_window, pos_x, pos_y)
         
         cv2.imshow(self.diag_window, diag_img)
 

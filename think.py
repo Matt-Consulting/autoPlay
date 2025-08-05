@@ -22,9 +22,6 @@ class Think:
             # Process learning (automatically checks player position)
             self.learner.process_grid(rgb_grid, alias_grid)
             
-            if self.show_types:
-                self._print_types(alias_grid)
-            
             if self.show_diag:
                 self.analyzer.show_diagnostics(alias_grid)
             else:

@@ -6,13 +6,15 @@
     "155,123,159": 2,
     "129,127,255": 2,
     "144,133,251": 2,
-    "170,127,181": 2,
-    "188,134,201": 2
+    "170,127,161": 2,
+    "166,134,201": 2,
+    "197,156,28": 3
   },
   "type_aliases": {
     "0": "block",
     "1": "brick",
-    "2": "player"
+    "2": "player",
+    "3": "A"
   },
   "tile_properties": {
     "block": {
@@ -28,17 +30,33 @@
       "interactable": false,
       "is_player": true,
       "animation_frames": {
-        "left": ["151,130,198", "155,123,159"],
-        "up": ["129,127,255"],
-        "down": ["144,133,251"],
-        "right": ["170,127,181", "188,134,201"]
+        "left": [
+          "151,130,198",
+          "155,123,159"
+        ],
+        "up": [
+          "129,127,255"
+        ],
+        "down": [
+          "144,133,251"
+        ],
+        "right": [
+          "170,127,181",
+          "188,134,201"
+        ]
       },
       "current_direction": "down"
     },
     "unknown": {
       "walkable": true,
       "interactable": false
+    },
+    "A": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "197,156,28"
     }
   },
-  "next_type_id": 3
+  "next_type_id": 4
 }

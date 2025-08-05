@@ -72,7 +72,7 @@ class DragonWarriorSensor:
         
         for y in range(h):
             for x in range(w):
-                b, g, r = rgb_grid[y, x]   # Convert to BGR order for OpenCV
+                r, g, b = rgb_grid[y, x]
                 px = x * scale_factor * 10 + 5
                 py = y * scale_factor * 10 + 5
                 
@@ -100,9 +100,8 @@ class DragonWarriorSensor:
         try:
             # Capture and convert frame
             frame = np.array(self.sct.grab(self.monitor))
-            frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-            frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-            
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGRA2RGB)
+
             if debug:
                 debug_file = Path("debug_capture.png")
                 cv2.imwrite(str(debug_file), frame_rgb)
@@ -114,13 +113,14 @@ class DragonWarriorSensor:
                     if self.rgb_window is None:
                         self.rgb_window = "Tile RGB Values"
                         cv2.namedWindow(self.rgb_window, cv2.WINDOW_NORMAL)
-                        cv2.resizeWindow(self.rgb_window, 800, 800)
+                        cv2.resizeWindow(self.rgb_window, 650, 700)
                     cv2.imshow(self.rgb_window, rgb_img)
                 
-                return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR), rgb_grid, None
-            
-            return cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR), None, None
-            
+                return frame, rgb_grid, None
+            else:
+                # When grid is disabled, return the frame with None for rgb_grid
+                return frame_rgb, None, None
+                
         except Exception as e:
             print(f"Capture error: {e}")
             blank = np.zeros((256, 256, 3), dtype=np.uint8)
@@ -139,8 +139,8 @@ class DragonWarriorSensor:
                 y_pos = grid_y * cell_size + cell_size // 2
                 
                 row_segment = frame[y_pos, x_start:x_end]
-                avg_bgr = np.mean(row_segment, axis=0).astype(np.uint8)
-                rgb_grid[grid_y, grid_x] = [avg_bgr[2], avg_bgr[1], avg_bgr[0]]  # BGR to RGB
+                avg_rgb = np.mean(row_segment, axis=0).astype(np.uint8)
+                rgb_grid[grid_y, grid_x] = [avg_rgb[0], avg_rgb[1], avg_rgb[2]]
                 
                 self._draw_cell_overlay(frame, 
                                      grid_x * cell_size, 
