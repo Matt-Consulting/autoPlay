@@ -22,9 +22,9 @@ class Config:
         self.emulator_start_delay = 2
         
         # Timing parameters
-        self.loops_per_second = 30  # Target frame rate
+        self.loops_per_second = 15  # Target frame rate
         self.main_loop_delay = 1/self.loops_per_second
-        
+
         # Display options
         self.show_rgb_by_default = True  # Enable RGB window on startup
         self.show_diagnostics_by_default = True  # Enable diagnostics window on startup
@@ -34,6 +34,8 @@ class Config:
             raise FileNotFoundError(f"Mesen emulator not found at {self.emulator_path}")
         if not self.rom_path.exists():
             raise FileNotFoundError(f"ROM not found at {self.rom_path}")
+        
+        
 
 def start_emulator(config):
     """Launch Mesen with default configuration"""
@@ -75,6 +77,8 @@ def main():
     emulator = sensor = thinker = None
     config = Config()
     
+    show_fps = False  # Track whether to display FPS
+    
     try:
         # Initialize all components
         emulator, sensor, thinker = initialize_game()
@@ -85,13 +89,22 @@ def main():
         print("  r - Toggle RGB values window")
         print("  d - Toggle diagnostics window")
         print("  s - Save discovered tiles")
+        print("  z - Reset learning process")
+        print("  f - Toggle FPS display")
+        print("  l - Toggle tile learning")
         
         # Main loop
         while True:
+            # Start frame timing
+            frame_start = time.time()
+            
             # Capture and process frame
             frame, rgb_grid, _ = sensor.capture_frame()
             cv2.imshow("Dragon Warrior Sensor", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-            thinker.process_frame(rgb_grid)
+            
+            # Only process frame if we have a valid RGB grid
+            if rgb_grid is not None:
+                thinker.process_frame(rgb_grid)
             
             # Handle input
             key = cv2.waitKey(1) & 0xFF
@@ -105,10 +118,31 @@ def main():
                 thinker.toggle_diagnostics()
             elif key == ord('s'):
                 thinker.save_discovered_tiles()
+            elif key == ord('z'):
+                thinker.reset_learning()
+            elif key == ord('f'):
+                show_fps = not show_fps
+                print(f"\nFPS display {'ON' if show_fps else 'OFF'}")
+                if not show_fps:
+                    print()  # Clear the line
+            elif key == ord('l'):
+                thinker.toggle_learning()
             
             # Maintain consistent timing
-            time.sleep(config.main_loop_delay)
+            elapsed = time.time() - frame_start
+            remaining_time = config.main_loop_delay - elapsed
+            if remaining_time > 0:
+                time.sleep(remaining_time)
+
+                        # Display FPS if enabled
+            if show_fps:
+                actual_frame_time = time.time() - frame_start
+                current_fps = 1.0 / actual_frame_time
+                fps_text = f"FPS: {current_fps:.1f} (Target: {config.loops_per_second})"
+                print(f"\r{fps_text}", end="", flush=True)
             
+    except KeyboardInterrupt:
+        print("\nReceived interrupt signal")
     except Exception as e:
         print(f"Error: {e}")
     finally:
@@ -119,7 +153,7 @@ def main():
             thinker.toggle_diagnostics()
         if emulator is not None:
             emulator.terminate()
-        print("Application terminated")
+        print("\nApplication terminated")
 
 if __name__ == "__main__":
     main()

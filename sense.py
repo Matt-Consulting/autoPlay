@@ -65,7 +65,7 @@ class DragonWarriorSensor:
 
     def _create_rgb_window(self, rgb_grid):
         """Create window showing RGB values for each tile"""
-        scale_factor = 4
+        scale_factor = 8
         h, w = rgb_grid.shape[0], rgb_grid.shape[1]
         rgb_img = np.zeros((h*scale_factor*10, w*scale_factor*10, 3), dtype=np.uint8)
         
@@ -78,19 +78,19 @@ class DragonWarriorSensor:
                 # Draw colored rectangle (BGR order for OpenCV)
                 cv2.rectangle(rgb_img, 
                             (px, py), 
-                            (px + scale_factor*8, py + scale_factor*8),
+                            (px + scale_factor*9, py + scale_factor*9),
                             (int(b), int(g), int(r)), -1)
                 
                 # Show RGB values
                 cv2.putText(rgb_img, f"R:{r:03}",
-                          (px, py + scale_factor*3),
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255), 1)
+                          (px, py + scale_factor*2),
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
                 cv2.putText(rgb_img, f"G:{g:03}",
                           (px, py + scale_factor*5),
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255), 1)
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
                 cv2.putText(rgb_img, f"B:{b:03}",
-                          (px, py + scale_factor*7),
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255), 1)
+                          (px, py + scale_factor*8),
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
         
         return rgb_img
     
@@ -142,19 +142,22 @@ class DragonWarriorSensor:
         
         for grid_y in range(self.GRID_SIZE):
             for grid_x in range(self.GRID_SIZE):
-                x_start = grid_x * cell_size + 2
-                x_end = x_start + cell_size - 4
-                y_pos = grid_y * cell_size + cell_size // 2
+                x_start = grid_x * cell_size + 3    # Ignore the 3 pixels at the beginning of the tile
+                x_end = x_start + 10                # Sample 10 pixels wide
+                y_pos = grid_y * cell_size + 12     # read the line 12 down from the top of the tile
+                
+                # Draw bright red sampling line (RGB color format)
+                # frame[y_pos, x_start:x_end] = [255, 0, 0]  # Bright red in RGB
                 
                 row_segment = frame[y_pos, x_start:x_end]
                 avg_rgb = np.mean(row_segment, axis=0).astype(np.uint8)
                 rgb_grid[grid_y, grid_x] = [avg_rgb[0], avg_rgb[1], avg_rgb[2]]
                 
                 self._draw_cell_overlay(frame, 
-                                     grid_x * cell_size, 
-                                     grid_y * cell_size,
-                                     cell_size, 
-                                     rgb_grid[grid_y, grid_x])
+                                    grid_x * cell_size, 
+                                    grid_y * cell_size,
+                                    cell_size, 
+                                    rgb_grid[grid_y, grid_x])
         
         return frame, rgb_grid
 

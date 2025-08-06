@@ -20,10 +20,29 @@ class TileLearner:
         self.most_recent_candidate = None  # Track the most recent candidate
         
         # Learning parameters
-        self.min_observations = 60  # Minimum observations before suggesting
+        self.min_observations = 20  # Minimum observations before suggesting
         self.max_rgb_options = 3  # Max RGB values to track per position
+        self.learning_enabled = True  # Add this line
+
+    def toggle_learning(self):
+        """Toggle the learning process on/off"""
+        self.learning_enabled = not self.learning_enabled
+        status = "ON" if self.learning_enabled else "OFF"
+        print(f"\nTile learning {status}")
+
+    def reset_learning(self):
+        """Reset all learning progress and observations"""
+        self.rgb_beliefs = defaultdict(dict)
+        self.observation_counts = defaultdict(int)
+        self.candidate_positions = set()
+        self.most_recent_candidate = None
+        print("\nLearning process has been reset - all observations cleared")
 
     def process_grid(self, rgb_grid, alias_grid):
+        """Process grid to discover unknown tiles"""
+        if not self.learning_enabled:  # Add this check
+            return
+
         """Process grid to discover unknown tiles"""
         if rgb_grid is None or alias_grid is None:
             return

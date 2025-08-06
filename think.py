@@ -29,6 +29,10 @@ class Think:
         
         return alias_grid
     
+    def reset_learning(self):
+        """Reset the learning process"""
+        self.learner.reset_learning()
+
     def _print_types(self, alias_grid):
         """Print tile types with learning stats"""
         stats = self.learner.get_observation_stats()
@@ -56,6 +60,10 @@ class Think:
         print(f"Diagnostics display {'ON' if self.show_diag else 'OFF'}")
         if not self.show_diag:
             self.analyzer.close_diagnostics()
+
+    def toggle_learning(self):
+        """Toggle the learning process on/off"""
+        self.learner.toggle_learning()
 
 if __name__ == "__main__":
     print("Initializing Think controller with POMDP learning...")
