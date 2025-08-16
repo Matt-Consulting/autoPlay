@@ -1,21 +1,25 @@
 #!/venv/bin/python3
 """
-Main Thinking Controller with POMDP learning
-Coordinates tile analysis and probabilistic learning
+Main Thinking Controller with POMDP learning and World Mapping
+Coordinates tile analysis, probabilistic learning, and world mapping
 """
 
 from TileAnalyzer import TileAnalyzer
 from TileLearner import TileLearner
+from mapping import WorldMapper
 
 class Think:
     def __init__(self, mappings_file="type_mappings.json"):
         self.analyzer = TileAnalyzer(mappings_file)
         self.learner = TileLearner(self.analyzer)
+        self.mapper = WorldMapper(self.analyzer)
         self.show_types = False
         self.show_diag = False
+        self.show_map = False
+        self.player_global_pos = (128, 128)  # Starting in middle of 256x256 map
 
     def process_frame(self, rgb_grid):
-        """Process a frame through analysis and learning"""
+        """Process a frame through analysis, learning, and mapping"""
         alias_grid = self.analyzer.analyze_grid(rgb_grid)
         
         if alias_grid is not None:
@@ -29,20 +33,21 @@ class Think:
         
         return alias_grid
     
+    def update_player_position(self, dx, dy):
+        """Update player's global position based on movement"""
+        self.player_global_pos = (
+            self.player_global_pos[0] + dx,
+            self.player_global_pos[1] + dy
+        )
+    
     def reset_learning(self):
         """Reset the learning process"""
         self.learner.reset_learning()
 
-    def _print_types(self, alias_grid):
-        """Print tile types with learning stats"""
-        stats = self.learner.get_observation_stats()
-        print("\nCurrent Tile Types:")
-        for row in alias_grid:
-            print(" ".join(row))
-        print(f"\nLearning Stats:")
-        print(f"- Unique tiles observed: {stats['total_observed']}")
-        print(f"- Total observations: {stats['total_observations']}")
-        print(f"- Candidates ready: {stats['candidates_ready']}")
+    def toggle_map(self):
+        """Toggle diagnostics window"""
+        self.show_map = not self.show_map
+        self.mapper.toggle_map()
 
     def save_discovered_tiles(self):
         """Save candidate tiles with confirmation"""
@@ -52,6 +57,7 @@ class Think:
             return False
             
         print(f"\nAbout to save {stats['candidates_ready']} tiles:")
+        print(f"Average confidence: {stats['average_confidence']:.1%}")
         return self.learner.save_new_tiles()
 
     def toggle_diagnostics(self):
@@ -65,6 +71,10 @@ class Think:
         """Toggle the learning process on/off"""
         self.learner.toggle_learning()
 
+    def get_learning_stats(self):
+        """Return current learning statistics"""
+        return self.learner.get_observation_stats()
+
 if __name__ == "__main__":
-    print("Initializing Think controller with POMDP learning...")
+    print("Initializing Think controller with POMDP learning and world mapping...")
     controller = Think()

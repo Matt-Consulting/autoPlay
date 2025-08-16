@@ -1,13 +1,37 @@
 {
   "color_to_type": {
-    "148,148,148": 0,
-    "155,49,35": 1,
-    "141,140,255": 2
+    "145,145,145": 0,
+    "152,49,36": 1,
+    "150,148,255": 2,
+    "99,148,229": 3,
+    "119,118,119": 4,
+    "136,135,136": 5,
+    "122,208,0": 6,
+    "153,172,11": 7,
+    "102,102,102": 8,
+    "80,80,80": 9,
+    "157,157,157": 10,
+    "234,158,34": 11,
+    "123,79,56": 12,
+    "152,152,152": 13,
+    "109,96,73": 14
   },
   "type_aliases": {
     "0": "block",
     "1": "brick",
-    "2": "player"
+    "2": "player",
+    "3": "A",
+    "4": "B",
+    "5": "C",
+    "6": "D",
+    "7": "E",
+    "8": "F",
+    "9": "G",
+    "10": "H",
+    "11": "I",
+    "12": "J",
+    "13": "K",
+    "14": "L"
   },
   "tile_properties": {
     "block": {
@@ -21,19 +45,96 @@
     "player": {
       "walkable": false,
       "interactable": false,
-      "is_player": true,
-      "animation_frames": {
-        "left": ["151,130,198", "155,123,159"],
-        "up": ["129,127,255"],
-        "down": ["144,133,251"],
-        "right": ["170,127,181", "188,134,201"]
-      },
-      "current_direction": "down"
+      "is_player": true
     },
     "unknown": {
       "walkable": true,
       "interactable": false
+    },
+    "A": {
+      "walkable": false,
+      "interactable": false,
+      "learned": true,
+      "rgb": "99,148,229",
+      "confidence": 1.0
+    },
+    "B": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "119,118,119",
+      "confidence": 1.0
+    },
+    "C": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "136,135,136",
+      "confidence": 1.0
+    },
+    "D": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "122,208,0",
+      "confidence": 1.0
+    },
+    "E": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "153,172,11",
+      "confidence": 1.0
+    },
+    "F": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "102,102,102",
+      "confidence": 1.0
+    },
+    "G": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "80,80,80",
+      "confidence": 1.0
+    },
+    "H": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "157,157,157",
+      "confidence": 1.0
+    },
+    "I": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "234,158,34",
+      "confidence": 1.0
+    },
+    "J": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "123,79,56",
+      "confidence": 1.0
+    },
+    "K": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "152,152,152",
+      "confidence": 1.0
+    },
+    "L": {
+      "walkable": true,
+      "interactable": false,
+      "learned": true,
+      "rgb": "109,96,73",
+      "confidence": 1.0
     }
   },
-  "next_type_id": 3
+  "next_type_id": 15
 }

@@ -122,6 +122,7 @@ class DragonWarriorSensor:
                         self.rgb_window = "Tile RGB Values"
                         cv2.namedWindow(self.rgb_window, cv2.WINDOW_NORMAL)
                         cv2.resizeWindow(self.rgb_window, 650, 700)
+                        cv2.moveWindow(self.rgb_window, 0, 350)  # This line moves the window
                     cv2.imshow(self.rgb_window, rgb_img)
                 
                 return frame, rgb_grid, None
@@ -142,28 +143,21 @@ class DragonWarriorSensor:
         
         for grid_y in range(self.GRID_SIZE):
             for grid_x in range(self.GRID_SIZE):
-                x_start = grid_x * cell_size + 3    # Ignore the 3 pixels at the beginning of the tile
-                x_end = x_start + 10                # Sample 10 pixels wide
+                x_start = grid_x * cell_size + 4    # Ignore the 3 pixels at the beginning of the tile
+                x_end = x_start + 9                # Sample 10 pixels wide
                 y_pos = grid_y * cell_size + 12     # read the line 12 down from the top of the tile
-                
-                # Draw bright red sampling line (RGB color format)
-                # frame[y_pos, x_start:x_end] = [255, 0, 0]  # Bright red in RGB
                 
                 row_segment = frame[y_pos, x_start:x_end]
                 avg_rgb = np.mean(row_segment, axis=0).astype(np.uint8)
                 rgb_grid[grid_y, grid_x] = [avg_rgb[0], avg_rgb[1], avg_rgb[2]]
                 
-                self._draw_cell_overlay(frame, 
-                                    grid_x * cell_size, 
-                                    grid_y * cell_size,
-                                    cell_size, 
-                                    rgb_grid[grid_y, grid_x])
+                # Draw cell boundaries (green)
+                cv2.rectangle(frame, (grid_x * cell_size, grid_y * cell_size), ((grid_x + 1) * cell_size, (grid_y + 1) * cell_size), (0, 255, 0), 1)
+
+                # Draw sampling boundaries (red)
+                cv2.rectangle(frame, (x_start-1, y_pos-1), (x_end, y_pos+1), (255, 0, 0), 1)
         
         return frame, rgb_grid
-
-    def _draw_cell_overlay(self, frame, x, y, size, rgb):
-        """Draw cell annotations"""
-        cv2.rectangle(frame, (x, y), (x+size, y+size), (0, 255, 0), 1)
 
     def toggle_grid(self): 
         self.grid_visible = not self.grid_visible
